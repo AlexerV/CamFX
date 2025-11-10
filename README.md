@@ -1,5 +1,12 @@
 # 🎥 CamFX
 
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)
+![OpenCV](https://img.shields.io/badge/OpenCV-Enabled-success?logo=opencv)
+![Tkinter](https://img.shields.io/badge/UI-Tkinter-orange)
+![VirtualCam](https://img.shields.io/badge/Camera-VirtualCam-lightgrey)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+
+
 **CamFX** est une application Python qui applique des effets visuels en temps réel à votre webcam, avec une interface Tkinter pour activer/désactiver les filtres et une sortie vers une **caméra virtuelle** (compatible OBS, Discord, Zoom, etc.).
 
 ---
@@ -68,6 +75,8 @@ python main.py
 
 ## 🖼️ Exemple de rendu
 <img width="293" height="560" alt="image" src="https://github.com/user-attachments/assets/98c5183e-18cd-403a-a21c-05249641d212" />
+
+Exemple de rendu du panneau de gestion des effets.
 
 ---
 
