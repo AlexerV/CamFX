@@ -1,6 +1,6 @@
-# 🎥 PyCamFX
+# 🎥 CamFX
 
-**PyCamFX** est une application Python qui applique des effets visuels en temps réel à votre webcam, avec une interface Tkinter pour activer/désactiver les filtres et une sortie vers une **caméra virtuelle** (compatible OBS, Discord, Zoom, etc.).
+**CamFX** est une application Python qui applique des effets visuels en temps réel à votre webcam, avec une interface Tkinter pour activer/désactiver les filtres et une sortie vers une **caméra virtuelle** (compatible OBS, Discord, Zoom, etc.).
 
 ---
 
