@@ -37,7 +37,7 @@
 
 ### 1️⃣ Cloner le dépôt
 ```bash
-git clone https://github.com/AlexerV/PyCamFX.git
+git clone https://github.com/AlexerV/CamFX.git
 cd CamFX
 ```
 
