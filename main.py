@@ -4,10 +4,11 @@ import pyvirtualcam
 import threading
 import tkinter as tk
 from tkinter import ttk
+import time
 
-
-
-# Effets disponibles
+# ================================== #
+#        Effets disponibles          #
+# ================================== #
 
 EFFECTS = {
 	"Glitch RGB": False,
@@ -24,12 +25,10 @@ EFFECTS = {
 }
 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
-mouth_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_smile.xml")
 
-
-
-# Fonctions effets standards
+# ================================== #
+#     Fonctions effets standards     #
+# ================================== #
 
 def apply_glitch(frame):
 	b, g, r = cv2.split(frame)
@@ -51,44 +50,34 @@ def apply_sketch(frame):
 	return cv2.cvtColor(sketch, cv2.COLOR_GRAY2BGR)
 
 def apply_pixelate(frame, pixel_size=10):
-	height, width = frame.shape[:2]
-	small = cv2.resize(frame, (width // pixel_size, height // pixel_size), interpolation=cv2.INTER_LINEAR)
-	return cv2.resize(small, (width, height), interpolation=cv2.INTER_NEAREST)
+	h, w = frame.shape[:2]
+	small = cv2.resize(frame, (w // pixel_size, h // pixel_size), interpolation=cv2.INTER_LINEAR)
+	return cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
 
 def apply_distortion(frame):
 	rows, cols = frame.shape[:2]
 	M = np.float32([[1, 0, np.random.randint(-10, 10)], [0, 1, np.random.randint(-10, 10)]])
-	distorted_frame = cv2.warpAffine(frame, M, (cols, rows))
-	return distorted_frame
+	return cv2.warpAffine(frame, M, (cols, rows))
 
 def apply_sepia(frame):
 	kernel = np.array([[0.393, 0.769, 0.189],
-					   [0.349, 0.686, 0.168],
-					   [0.272, 0.534, 0.131]])
-	sepia_frame = cv2.transform(frame, kernel)
-	sepia_frame = np.clip(sepia_frame, 0, 255)
-	return sepia_frame.astype(np.uint8)
+										 [0.349, 0.686, 0.168],
+										 [0.272, 0.534, 0.131]])
+	sepia = cv2.transform(frame, kernel)
+	return np.clip(sepia, 0, 255).astype(np.uint8)
 
 def add_noise(frame):
-	row, col, ch = frame.shape
-	mean = 0
-	sigma = 25
-	gauss = np.random.normal(mean, sigma, (row, col, ch))
-	noisy_frame = np.array(frame, dtype=float) + gauss
-	noisy_frame = np.clip(noisy_frame, 0, 255)
-	return noisy_frame.astype(np.uint8)
+	noise = np.random.normal(0, 25, frame.shape)
+	return np.clip(frame + noise, 0, 255).astype(np.uint8)
 
 def apply_old_film_effect(frame):
-	frame = apply_sepia(frame)
-	frame = add_noise(frame)
-	return frame
+	return add_noise(apply_sepia(frame))
 
 def apply_cartoon(frame):
 	blurred = cv2.bilateralFilter(frame, 9, 75, 75)
 	edges = cv2.adaptiveThreshold(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), 255,
-								  cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9)
-	cartoon_frame = cv2.bitwise_and(blurred, blurred, mask=edges)
-	return cartoon_frame
+																cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9)
+	return cv2.bitwise_and(blurred, blurred, mask=edges)
 
 def apply_wave_distortion(frame, intensity=10):
 	rows, cols, _ = frame.shape
@@ -97,28 +86,12 @@ def apply_wave_distortion(frame, intensity=10):
 		frame[i] = np.roll(frame[i], offset, axis=0)
 	return frame
 
-rotation_angle = 0
-def apply_rotation(frame):
-	global rotation_angle, rotation_speed
-	rows, cols, _ = frame.shape
-	rotation_angle += rotation_speed
-	
-	if rotation_angle >= 360:
-		rotation_angle = 0
-	
-	matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), rotation_angle, 1)
-	
-	rotated_frame = cv2.warpAffine(frame, matrix, (cols, rows))
-	return rotated_frame
-
 def apply_radial_inversion_on_face(frame, scale=0.5):
 	rows, cols = frame.shape[:2]
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 	faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
 	if len(faces) == 0:
 		return frame
-
 	(x, y, w, h) = faces[0]
 	center_x = x + w // 2
 	center_y = y + h // 2
@@ -128,22 +101,25 @@ def apply_radial_inversion_on_face(frame, scale=0.5):
 	max_radius = max_distance * scale
 	norm_distance = (distance / max_radius)
 	result = frame.copy()
-	
 	for i in range(rows):
 		for j in range(cols):
 			if norm_distance[i, j] < 1:
 				factor = norm_distance[i, j]
 				x = int(center_x + factor * (j - center_x))
 				y = int(center_y + factor * (i - center_y))
-				
 				if 0 <= x < cols and 0 <= y < rows:
 					result[i, j] = frame[y, x]
-
 	return result
 
+rotation_angle = 0
+rotation_speed = 1
 
-
-# Application des effets actifs
+def apply_rotation(frame):
+	global rotation_angle, rotation_speed
+	rows, cols, _ = frame.shape
+	rotation_angle = (rotation_angle + rotation_speed) % 360
+	M = cv2.getRotationMatrix2D((cols / 2, rows / 2), rotation_angle, 1)
+	return cv2.warpAffine(frame, M, (cols, rows))
 
 def apply_effects(frame):
 	if EFFECTS["Glitch RGB"]:
@@ -170,31 +146,78 @@ def apply_effects(frame):
 		frame = apply_rotation(frame)
 	return frame
 
-rotation_speed = 1
+# ================================== #
+#          Gestion caméra            #
+# ================================== #
 
+selected_camera_index = 0
+cap = None
+running = True
 
+def change_camera(new_index):
+	global cap
+	if cap is not None and cap.isOpened():
+		cap.release()
+	cap = cv2.VideoCapture(new_index)
+	if not cap.isOpened():
+		print(f"❌ Impossible d'accéder à la caméra {new_index}")
+	else:
+		print(f"✅ Caméra {new_index} activée")
 
-# Interface Tkinter
+# ================================== #
+#          Interface Tkinter         #
+# ================================== #
+
+def detect_cameras(max_tested=5):
+	available = []
+	for i in range(max_tested):
+		cap_test = cv2.VideoCapture(i)
+		if cap_test.isOpened():
+			available.append(f"Caméra {i}")
+			cap_test.release()
+	return available
 
 def start_gui():
+	global selected_camera_index, running
+
 	root = tk.Tk()
 	root.title("🎛️ Contrôle des filtres caméra")
-	root.geometry("300x500")
+	root.geometry("300x600")
 	root.resizable(False, True)
 
-	ttk.Label(root, text="Active / désactive les effets :", font=("Arial", 12, "bold")).pack(pady=10)
+	ttk.Label(root, text="Sélectionne la caméra :", font=("Arial", 11, "bold")).pack(pady=10)
+	cameras = detect_cameras()
+	if not cameras:
+		cameras = ["Aucune caméra détectée"]
 
-	for name in EFFECTS.keys():
+	selected_camera = tk.StringVar(value=cameras[0])
+	combo = ttk.Combobox(root, textvariable=selected_camera, values=cameras, state="readonly")
+	combo.pack(pady=5)
+
+	def update_camera(event=None):
+		global selected_camera_index
+		try:
+			idx = int(selected_camera.get().split()[-1])
+			selected_camera_index = idx
+			change_camera(idx)
+			print(f"🎥 Caméra sélectionnée : {idx}")
+		except:
+			pass
+
+	combo.bind("<<ComboboxSelected>>", update_camera)
+
+	ttk.Separator(root, orient="horizontal").pack(fill="x", pady=10)
+	ttk.Label(root, text="Active / désactive les effets :", font=("Arial", 12, "bold")).pack(pady=5)
+
+	for name in EFFECTS:
 		var = tk.BooleanVar(value=False)
-		def toggle_effect(effect_name=name, var=var):
-			EFFECTS[effect_name] = var.get()
-		chk = ttk.Checkbutton(root, text=name, variable=var, command=toggle_effect)
-		chk.pack(anchor="w", padx=20, pady=5)
+		chk = ttk.Checkbutton(root, text=name, variable=var, command=lambda n=name, v=var: EFFECTS.__setitem__(n, v.get()))
+		chk.pack(anchor="w", padx=20, pady=3)
 
 	ttk.Label(root, text="Vitesse de rotation :").pack(pady=10)
-	rotation_slider = tk.Scale(root, from_=1, to=10, orient="horizontal", command=lambda val: update_rotation_speed(val))
-	rotation_slider.set(rotation_speed)
-	rotation_slider.pack(pady=10)
+	rot_slider = tk.Scale(root, from_=1, to=10, orient="horizontal", command=lambda val: update_rotation_speed(val))
+	rot_slider.set(rotation_speed)
+	rot_slider.pack(pady=10)
 
 	ttk.Label(root, text="Ferme la fenêtre pour arrêter le flux.", font=("Arial", 9)).pack(side="bottom", pady=10)
 
@@ -206,42 +229,45 @@ def start_gui():
 		global running
 		running = False
 		root.destroy()
-	root.protocol("WM_DELETE_WINDOW", on_close)
 
+	root.protocol("WM_DELETE_WINDOW", on_close)
 	root.mainloop()
 
+# ================================== #
+#         Thread caméra virtuelle    #
+# ================================== #
 
+def camera_loop():
+	global running, cap
+	with pyvirtualcam.Camera(width=640, height=480, fps=20) as cam:
+		print("🎥 Caméra virtuelle prête ! (Sélectionne-la dans Discord)")
+		while running:
+			if cap is None or not cap.isOpened():
+				time.sleep(0.5)
+				continue
 
-# Capture caméra
+			ret, frame = cap.read()
+			if not ret:
+				time.sleep(0.1)
+				continue
 
-cap = cv2.VideoCapture(1)  # valeur à modifier pour une autre caméra
-if not cap.isOpened():
-	raise RuntimeError("Impossible d'accéder à la caméra")
+			frame = apply_effects(frame)
+			frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+			cam.send(frame_rgb)
+			cam.sleep_until_next_frame()
 
-running = True
-threading.Thread(target=start_gui, daemon=True).start()
+			cv2.imshow("Caméra avec filtres", frame_rgb)
+			if cv2.waitKey(1) & 0xFF == ord('q'):
+				running = False
+				break
 
+	cv2.destroyAllWindows()
+	print("🛑 Caméra arrêtée.")
 
+# ================================== #
+#             Lancement              #
+# ================================== #
 
-# Envoi à Discord
-
-with pyvirtualcam.Camera(width=640, height=480, fps=20) as cam:
-	print("🎥 Caméra virtuelle prête ! (Sélectionne-la dans Discord)")
-	while running:
-		ret, frame = cap.read()
-		if not ret:
-			break
-
-		frame = apply_effects(frame)
-		frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-		cam.send(frame)
-		cam.sleep_until_next_frame()
-
-		cv2.imshow("Caméra avec filtres", frame)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			running = False
-			break
-
-cap.release()
-cv2.destroyAllWindows()
-print("🛑 Caméra arrêtée.")
+change_camera(selected_camera_index)
+threading.Thread(target=camera_loop, daemon=True).start()
+start_gui()
