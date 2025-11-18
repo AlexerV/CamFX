@@ -68,6 +68,7 @@ python main.py
 ```
 
 - Une fenêtre Tkinter s’ouvre pour gérer les effets.
+- Tu peux choisir la caméra de ton choix si tu en as plusieurs.
 - La caméra virtuelle apparaît dans tes applications (OBS, Discord, etc.).
 - Pour arrêter, ferme la fenêtre ou appuie sur `Q`.
 
@@ -77,15 +78,6 @@ python main.py
 <img width="293" height="560" alt="image" src="https://github.com/user-attachments/assets/98c5183e-18cd-403a-a21c-05249641d212" />
 
 Exemple de rendu du panneau de gestion des effets.
-
----
-
-## ⚙️ Configuration
-- La caméra utilisée par défaut est `0`.  
-Si ta webcam principale est sur un autre index (ex: 1), modifie cette ligne :
-```python
-cap = cv2.VideoCapture(0)  # en modifiant 0 par 1
-```
 
 ---
 
